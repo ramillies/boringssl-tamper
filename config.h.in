@@ -1,0 +1,2 @@
+#cmakedefine ENABLE_PKCS11
+#cmakedefine PKCS11_HEADER "@PKCS11_HEADER@"

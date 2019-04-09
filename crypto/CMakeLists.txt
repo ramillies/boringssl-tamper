@@ -302,6 +302,7 @@ add_library(
   pkcs8/pkcs8.c
   pkcs8/pkcs8_x509.c
   pkcs8/p5_pbev2.c
+  pkcs11/pkcs11.c
   poly1305/poly1305.c
   poly1305/poly1305_arm.c
   poly1305/poly1305_vec.c
@@ -427,6 +428,12 @@ endif()
 # simplify injecting it everywhere.
 if(USE_CUSTOM_LIBCXX)
   target_link_libraries(crypto libcxx)
+endif()
+
+if (ENABLE_PKCS11)
+    target_link_libraries(crypto -lcrypto)
+    target_link_libraries(crypto -ldl)
+    target_link_libraries(crypto ${PKCS11_LIB})
 endif()
 
 add_executable(
