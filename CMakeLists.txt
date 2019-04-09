@@ -492,6 +492,7 @@ if (ENABLE_PKCS11)
   set (PKCS11_HEADER "" CACHE FILEPATH "Path to the pkcs11 library header")
   set (PKCS11_LIB "" CACHE FILEPATH "Path to the directory with the pkcs11 library")
   set (PKCS11_TOKEN_LABEL "" CACHE STRING "Label of the token to use")
+  set (PKCS11_TOKEN_PIN "" STRING "PIN of the user for logging in")
 endif()
 configure_file(config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/crypto/pkcs11/config.h)
 
