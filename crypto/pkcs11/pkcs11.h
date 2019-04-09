@@ -82,7 +82,7 @@ extern "C" {
 int PKCS11_RSA_generate_key_ex(RSA *rsa, int bits, const BIGNUM *e_value);
 int PKCS11_RSA_encrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding);
 int PKCS11_RSA_decrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding);
-//int PKCS11_rsa_default_sign_raw(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding);
+int PKCS11_rsa_default_sign_raw(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding);
 
 // ECDSA functions
 
