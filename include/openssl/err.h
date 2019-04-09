@@ -320,7 +320,8 @@ enum {
   ERR_LIB_CIPHER,
   ERR_LIB_HKDF,
   ERR_LIB_USER,
-  ERR_NUM_LIBS
+  ERR_NUM_LIBS,
+  ERR_LIB_PKCS11
 };
 
 // The following reason codes used to denote an error occuring in another
@@ -343,6 +344,7 @@ enum {
 #define ERR_R_BIO_LIB ERR_LIB_BIO
 #define ERR_R_PKCS7_LIB ERR_LIB_PKCS7
 #define ERR_R_PKCS8_LIB ERR_LIB_PKCS8
+#define ERR_R_PKCS11_LIB ERR_LIB_PKCS11
 #define ERR_R_X509V3_LIB ERR_LIB_X509V3
 #define ERR_R_RAND_LIB ERR_LIB_RAND
 #define ERR_R_DSO_LIB ERR_LIB_DSO
