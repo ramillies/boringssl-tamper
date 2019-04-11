@@ -82,10 +82,13 @@ extern "C" {
 int PKCS11_RSA_generate_key_ex(RSA *rsa, int bits, const BIGNUM *e_value);
 int PKCS11_RSA_encrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding);
 int PKCS11_RSA_decrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding);
-int PKCS11_rsa_default_sign_raw(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding);
+int PKCS11_RSA_sign(int hash_nid, const uint8_t *in, unsigned int in_len, uint8_t *out, unsigned int *out_len, RSA *rsa);
 
 // ECDSA functions
 
+// int PKCS11_EC_KEY_generate_key(EC_KEY *key);
+
+// Error codes
 
 #define PKCS11_LABEL_NOT_FOUND 500
 #define PKCS11_FILL_RSA_ERR 501
@@ -93,6 +96,7 @@ int PKCS11_rsa_default_sign_raw(RSA *rsa, size_t *out_len, uint8_t *out, size_t 
 #define PKCS11_NOT_ENABLED 503
 #define PKCS11_UNKNOWN_PADDING 504
 #define PKCS11_OBJECT_NOT_FOUND 505
+#define PKCS11_UNKNOWN_HASH 506
 
 #if defined(__cplusplus)
 }  // extern C

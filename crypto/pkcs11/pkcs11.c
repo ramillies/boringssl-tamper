@@ -2,6 +2,7 @@
 #include <openssl/err.h>
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
+#include <openssl/nid.h>
 #include "pkcs11.h"
 #include "config.h"
 
@@ -63,7 +64,7 @@ static int get_session(CK_SESSION_HANDLE* session) {
         return 0;
     }
 
-    if ((ret = C_Login(session, CKU_USER, PKCS11_TOKEN_PIN, ARRAY_SIZE(PKCS11_TOKEN_PIN))) != CKR_OK) {
+    if ((ret = C_Login(*session, CKU_USER, (unsigned char*)PKCS11_TOKEN_PIN, ARRAY_SIZE(PKCS11_TOKEN_PIN))) != CKR_OK) {
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
@@ -282,7 +283,7 @@ int PKCS11_RSA_decrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, 
     return 0;
 }
 
-int PKCS11_rsa_default_sign_raw(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding) {
+int PKCS11_RSA_sign(int hash_nid, const uint8_t *in, unsigned int in_len, uint8_t *out, unsigned int *out_len, RSA *rsa) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -292,24 +293,24 @@ int PKCS11_rsa_default_sign_raw(RSA *rsa, size_t *out_len, uint8_t *out, size_t 
         return 0;
     }
 
-    if (max_out < RSA_size(rsa)) {
-        OPENSSL_PUT_ERROR(RSA, RSA_R_OUTPUT_BUFFER_TOO_SMALL);
-        return 0;
-    }
-
     CK_RV ret;
     CK_SESSION_HANDLE session;
 
     get_session(&session);
 
     CK_MECHANISM_TYPE type;
-    switch (padding) {
-        case RSA_PKCS1_PADDING : type = CKM_RSA_PKCS; break;
-        case RSA_NO_PADDING : type = CKM_RSA_X_509; break;
-        case RSA_PKCS1_OAEP_PADDING : type = CKM_RSA_PKCS_OAEP; break;
-        case RSA_PKCS1_PSS_PADDING : type = CKM_RSA_PKCS_PSS; break;
-        default : OPENSSL_PUT_ERROR(PKCS11, PKCS11_UNKNOWN_PADDING); return 0;
+    switch(hash_nid) {
+        case NID_md2 : type = CKM_MD2_RSA_PKCS; break;
+        case NID_md5 : type = CKM_MD5_RSA_PKCS; break;
+        case NID_sha1 : type = CKM_SHA1_RSA_PKCS; break;
+        case NID_sha224 : type = CKM_SHA224_RSA_PKCS; break;
+        case NID_sha256 : type = CKM_SHA256_RSA_PKCS; break;
+        case NID_sha384 : type = CKM_SHA384_RSA_PKCS; break;
+        case NID_sha512 : type = CKM_SHA512_RSA_PKCS; break;
+        case NID_ripemd160 : type = CKM_RIPEMD160_RSA_PKCS; break;
+        default : OPENSSL_PUT_ERROR(PKCS11, PKCS11_UNKNOWN_HASH); return 0;
     }
+
     CK_MECHANISM mech = { type, NULL_PTR, 0 };
 
     CK_OBJECT_HANDLE private;
@@ -321,9 +322,12 @@ int PKCS11_rsa_default_sign_raw(RSA *rsa, size_t *out_len, uint8_t *out, size_t 
         return 0;
     }
 
-    if ((ret = C_Sign(session, (unsigned char*)in, in_len, out, out_len)) != CKR_OK) {
+    CK_ULONG ret_out_len;
+    if ((ret = C_Sign(session, (unsigned char*)in, in_len, out, &ret_out_len)) != CKR_OK) {
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
+    *out_len = ret_out_len;
+
     return 0;
 }
