@@ -105,8 +105,8 @@ static int fill_rsa_pub(RSA *rsa, CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE *
 
     BIGNUM *e = NULL;
     BIGNUM *n = NULL;
-    BN_bin2bn(modulus, templ[0].ulValueLen, n);
-    BN_bin2bn(exp, templ[1].ulValueLen, e);
+    n = BN_bin2bn(modulus, templ[0].ulValueLen, NULL);
+    e = BN_bin2bn(exp, templ[1].ulValueLen, NULL);
     rsa->e = e;
     rsa->n = n;
 
@@ -173,9 +173,7 @@ int PKCS11_RSA_generate_key_ex(RSA *rsa, int bits, const BIGNUM *e_value) {
     CK_ULONG ck_bits = bits;
     CK_BYTE ck_exponent[BN_num_bytes(e_value)];
     BN_bn2bin(e_value, ck_exponent);
-    CK_OBJECT_CLASS class = CKO_PUBLIC_KEY;
     CK_ATTRIBUTE RSA_PUB_TEMPLATE[] = {
-            { CKA_CLASS, &class, sizeof(class) },
             { CKA_TOKEN, &CTRUE, sizeof(CTRUE) },
             { CKA_MODULUS_BITS, &ck_bits, sizeof(ck_bits) },
             { CKA_ENCRYPT, &CTRUE, sizeof(CTRUE) },
@@ -183,9 +181,7 @@ int PKCS11_RSA_generate_key_ex(RSA *rsa, int bits, const BIGNUM *e_value) {
             { CKA_PUBLIC_EXPONENT, ck_exponent, BN_num_bytes(e_value) }
     };
 
-    class = CKO_PRIVATE_KEY;
     CK_ATTRIBUTE RSA_PRIV_TEMPLATE[] = {
-            { CKA_CLASS, &class, sizeof(class) },
             { CKA_TOKEN, &CTRUE, sizeof(CTRUE) },
             { CKA_EXTRACTABLE, &CFALSE, sizeof(CFALSE) },
             { CKA_SENSITIVE, &CTRUE, sizeof(CTRUE) },
