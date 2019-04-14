@@ -51,12 +51,14 @@ bool GenerateRSAKeyPKCS11(const std::vector<std::string> &args) {
   bssl::UniquePtr<BIGNUM> e(BN_new());
   bssl::UniquePtr<BIO> bio(BIO_new_fp(stdout, BIO_NOCLOSE));
 
-  if (!BN_set_word(e.get(), RSA_F4) ||
+  if (!PKCS11_init() ||
+      !BN_set_word(e.get(), RSA_F4) ||
       !PKCS11_RSA_generate_key_ex(rsa.get(), bits, e.get()) ||
       !PEM_write_bio_RSAPublicKey(bio.get(), rsa.get())) {
     ERR_print_errors_fp(stderr);
     return false;
   }
 
+  PKCS11_kill();
   return true;
 }

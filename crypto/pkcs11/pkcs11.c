@@ -23,13 +23,28 @@ static CK_BBOOL CFALSE = FALSE;
 
 // Common functions
 
+int PKCS11_init(void)
+{
+	CK_RV ret;
+	if ((ret = C_Initialize(NULL)) != CKR_OK) {
+		OPENSSL_PUT_ERROR(PKCS11,ret);
+		return 0;
+	}
+	return 1;
+}
+
+int PKCS11_kill(void)
+{
+	CK_RV ret;
+	if ((ret = C_Finalize(NULL)) != CKR_OK) {
+		OPENSSL_PUT_ERROR(PKCS11,ret);
+		return 0;
+	}
+	return 1;
+}
+
 static int find_the_token(CK_SLOT_ID *slot) {
     CK_RV ret;
-
-    if ((ret = C_Initialize(NULL)) != CKR_OK) {
-        OPENSSL_PUT_ERROR(PKCS11,ret);
-        return 0;
-    }
 
     /* get slot list: */
     unsigned long count = 0;
@@ -74,15 +89,34 @@ static int get_session(CK_SESSION_HANDLE* session) {
 
     if ((ret = C_OpenSession(slot, CKF_RW_SESSION | CKF_SERIAL_SESSION, NULL_PTR, NULL_PTR, session)) != CKR_OK) {
         OPENSSL_PUT_ERROR(PKCS11,ret);
+	printf("Failed to open a session with %lu.\n", ret);
         return 0;
     }
 
     if ((ret = C_Login(*session, CKU_USER, (unsigned char*)PKCS11_TOKEN_PIN, strlen(PKCS11_TOKEN_PIN))) != CKR_OK) {
+	printf("Failed to login with %lu.\n", ret);
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
 
     return 1;
+}
+
+static int kill_session(CK_SESSION_HANDLE session)
+{
+	CK_RV ret;
+	if((ret = C_Logout(session)) != CKR_OK)
+	{
+		printf("Failed to log out.\n");
+		return 0;
+	}
+	if((ret = C_CloseSession(session)) != CKR_OK)
+	{
+		printf("Failed to close the session.\n");
+		return 0;
+	}
+
+	return 1;
 }
 
 // RSA private functions
@@ -128,23 +162,27 @@ static int get_rsa_key(const CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE *key, 
             { CKA_PUBLIC_EXPONENT, exponent, BN_num_bytes(rsa->e) }
     };
 
-    if ((ret = C_FindObjectsInit(*session, templ, 6)) != CKR_OK) {
+    if ((ret = C_FindObjectsInit(*session, templ, 5)) != CKR_OK) {
+	printf("Cannot init finding objects with %lu.\n", ret);
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
 
     CK_ULONG count;
     if ((ret = C_FindObjects(*session, key, 1, &count)) != CKR_OK) {
+	printf("Cannot do finding objects.\n");
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
 
-    if (count < 1) {
+    if (count < 1UL) {
+	printf("No objects found.\n");
         OPENSSL_PUT_ERROR(PKCS11,PKCS11_OBJECT_NOT_FOUND);
         return 0;
     }
 
     if ((ret = C_FindObjectsFinal(*session)) != CKR_OK) {
+	printf("Cannot finalize finding objects.\n");
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
@@ -195,14 +233,17 @@ int PKCS11_RSA_generate_key_ex(RSA *rsa, int bits, const BIGNUM *e_value) {
                             RSA_PRIV_TEMPLATE, ARRAY_SIZE(RSA_PRIV_TEMPLATE),
                             &pub_key, &priv_key)) != CKR_OK) {
         OPENSSL_PUT_ERROR(PKCS11,ret);
+	kill_session(session);
         return 0;
     }
 
     if (!fill_rsa_pub(rsa, &session, &pub_key, bits)) {
         OPENSSL_PUT_ERROR(PKCS11,PKCS11_FILL_RSA_ERR);
+	kill_session(session);
         return 0;
     }
 
+    kill_session(session);
     return 1;
 }
 
@@ -224,7 +265,11 @@ int PKCS11_RSA_encrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, 
     CK_RV ret;
     CK_SESSION_HANDLE session;
 
-    get_session(&session);
+    if(!get_session(&session))
+    {
+	    printf("Failed to establish a session.\n");
+	    return 0;
+    }
 
     CK_MECHANISM_TYPE type;
     switch (padding) {
@@ -237,15 +282,19 @@ int PKCS11_RSA_encrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, 
     CK_MECHANISM mech = { type, NULL_PTR, 0 };
 
     CK_OBJECT_HANDLE public;
-    if (!get_rsa_key(&session, &public, rsa, CKO_PUBLIC_KEY))
+    if (!get_rsa_key(&session, &public, rsa, CKO_PUBLIC_KEY)) {
+	printf("Failed to get the RSA key.\n");
         return 0;
+    }
 
     if ((ret = C_EncryptInit(session, &mech, public)) != CKR_OK) {
+	printf("Failed to initialize RSA encryption with %lu.\n", ret);
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
 
     if ((ret = C_Encrypt(session, (unsigned char*)in, in_len, out, out_len)) != CKR_OK) {
+	printf("Failed to perform RSA encryption with %lu.\n", ret);
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }

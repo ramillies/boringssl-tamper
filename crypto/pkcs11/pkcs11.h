@@ -63,6 +63,11 @@
 extern "C" {
 #endif
 
+// Init & shutdown
+
+int PKCS11_init(void);
+int PKCS11_kill(void);
+
 // RSA functions
 
 int PKCS11_RSA_generate_key_ex(RSA *rsa, int bits, const BIGNUM *e_value);
