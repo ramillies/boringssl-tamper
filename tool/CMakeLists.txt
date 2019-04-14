@@ -11,6 +11,7 @@ add_executable(
   file.cc
   generate_ed25519.cc
   genrsa.cc
+  genrsapkcs11.cc
   pkcs12.cc
   rand.cc
   server.cc
@@ -18,6 +19,8 @@ add_executable(
   speed.cc
   tool.cc
   transport_common.cc
+  
+  ../crypto/pkcs11/pkcs11.c
 )
 
 add_dependencies(bssl global_target)

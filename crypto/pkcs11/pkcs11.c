@@ -14,8 +14,6 @@
 
 #endif
 
-#define SLOT_COUNT 128
-#define LABEL_SIZE 32
 #define BUFFER_MAX_ECPOINT_LEN ((528*2 / 8) + 1)
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -27,11 +25,20 @@ static CK_BBOOL CFALSE = FALSE;
 
 static int find_the_token(CK_SLOT_ID *slot) {
     CK_RV ret;
-    CK_SLOT_ID slots[SLOT_COUNT];
+
+    if ((ret = C_Initialize(NULL)) != CKR_OK) {
+        OPENSSL_PUT_ERROR(PKCS11,ret);
+        return 0;
+    }
 
     /* get slot list: */
-    unsigned long count = SLOT_COUNT;
-    if ((ret = C_GetSlotList(FALSE, slots, &count)) != CKR_OK) {
+    unsigned long count = 0;
+    if ((ret = C_GetSlotList(TRUE, NULL, &count)) != CKR_OK) {
+        OPENSSL_PUT_ERROR(PKCS11,ret);
+        return 0;
+    }
+    CK_SLOT_ID slots[count];
+    if ((ret = C_GetSlotList(TRUE, slots, &count)) != CKR_OK) {
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
@@ -44,7 +51,7 @@ static int find_the_token(CK_SLOT_ID *slot) {
             OPENSSL_PUT_ERROR(PKCS11,ret);
             return 0;
         }
-        if (memcmp(PKCS11_TOKEN_LABEL, token.label, LABEL_SIZE) == 0) {
+        if (memcmp(PKCS11_TOKEN_LABEL, token.label, strlen(PKCS11_TOKEN_LABEL)) == 0) {
             token_found = 1;
             *slot = slots[i];
             break;
@@ -65,16 +72,16 @@ static int get_session(CK_SESSION_HANDLE* session) {
         return 0;
     }
 
-    if ((ret = C_OpenSession(slot, CKF_RW_SESSION | CKF_SERIAL_SESSION,
-                             NULL_PTR, NULL_PTR, session)) != CKR_OK) {
+    if ((ret = C_OpenSession(slot, CKF_RW_SESSION | CKF_SERIAL_SESSION, NULL_PTR, NULL_PTR, session)) != CKR_OK) {
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
 
-    if ((ret = C_Login(*session, CKU_USER, (unsigned char*)PKCS11_TOKEN_PIN, ARRAY_SIZE(PKCS11_TOKEN_PIN))) != CKR_OK) {
+    if ((ret = C_Login(*session, CKU_USER, (unsigned char*)PKCS11_TOKEN_PIN, strlen(PKCS11_TOKEN_PIN))) != CKR_OK) {
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
+
     return 1;
 }
 
@@ -187,7 +194,6 @@ int PKCS11_RSA_generate_key_ex(RSA *rsa, int bits, const BIGNUM *e_value) {
     };
 
     CK_OBJECT_HANDLE priv_key, pub_key;
-
     if ((ret = C_GenerateKeyPair(session, &mech,
                             RSA_PUB_TEMPLATE, ARRAY_SIZE(RSA_PUB_TEMPLATE),
                             RSA_PRIV_TEMPLATE, ARRAY_SIZE(RSA_PRIV_TEMPLATE),
