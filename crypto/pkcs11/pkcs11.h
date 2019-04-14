@@ -59,20 +59,6 @@
 
 #include <openssl/base.h>
 
-/*#if !defined(OPENSSL_WINDOWS)
-#if defined(OPENSSL_PNACL)
-// newlib uses u_short in socket.h without defining it.
-typedef unsigned short u_short;
-#endif
-#include <sys/types.h>
-#include <sys/socket.h>
-#else
-OPENSSL_MSVC_PRAGMA(warning(push, 3))
-#include <winsock2.h>
-OPENSSL_MSVC_PRAGMA(warning(pop))
-typedef int socklen_t;
-#endif*/
-
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -86,7 +72,9 @@ int PKCS11_RSA_sign(int hash_nid, const uint8_t *in, unsigned int in_len, uint8_
 
 // ECDSA functions
 
-// int PKCS11_EC_KEY_generate_key(EC_KEY *key);
+int PKCS11_EC_KEY_generate_key(EC_KEY *key);
+int PKCS11_ECDSA_sign(const uint8_t *digest, size_t digest_len, uint8_t *sig, unsigned int *sig_len, const EC_KEY *key);
+int PKCS11_ECDSA_verify(const uint8_t *digest, size_t digest_len, const uint8_t *sig, size_t sig_len, const EC_KEY *key);
 
 // Error codes
 
@@ -97,6 +85,10 @@ int PKCS11_RSA_sign(int hash_nid, const uint8_t *in, unsigned int in_len, uint8_
 #define PKCS11_UNKNOWN_PADDING 504
 #define PKCS11_OBJECT_NOT_FOUND 505
 #define PKCS11_UNKNOWN_HASH 506
+#define PKCS11_EXTRACT_ASN1_FAIL 507
+#define PKCS11_FILL_EC_ERR 508
+#define PKCS11_INVALID_ENCODING 509
+#define PKCS11_OUT_BUFFER_TOO_SMALL 510
 
 #if defined(__cplusplus)
 }  // extern C

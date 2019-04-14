@@ -487,7 +487,7 @@ if(${ARCH} STREQUAL "x86" AND APPLE AND ${CMAKE_VERSION} VERSION_LESS "3.0")
   set(ARCH "x86_64")
 endif()
 
-option(ENABLE_PKCS11 "Enable support for PKCS11" ON)
+option(ENABLE_PKCS11 "Enable support for PKCS11" OFF)
 if (ENABLE_PKCS11)
   set (PKCS11_HEADER "" CACHE FILEPATH "Path to the pkcs11 library header")
   set (PKCS11_LIB "" CACHE FILEPATH "Path to the directory with the pkcs11 library")
