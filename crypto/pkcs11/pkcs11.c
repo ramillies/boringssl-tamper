@@ -331,7 +331,7 @@ int PKCS11_RSA_decrypt(CK_SESSION_HANDLE session, RSA *rsa, uint8_t *out, size_t
     return 1;
 }
 
-int PKCS11_RSA_sign(CK_SESSION_HANDLE session, RSA *rsa, int hash_nid, uint8_t *out, unsigned int *out_len, const uint8_t *in, unsigned int in_len) {
+int PKCS11_RSA_sign(CK_SESSION_HANDLE session, RSA *rsa, int hash_nid, uint8_t *out, size_t *out_len, const uint8_t *in, size_t in_len) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -471,6 +471,7 @@ int PKCS11_EC_KEY_generate_key(CK_SESSION_HANDLE session, EC_KEY *key) {
     return 0;
 #endif
     if (!key || !(key->group)) {
+	printf("Null parameter given to ECC key generation.\n");
         OPENSSL_PUT_ERROR(PKCS11,PKCS11_NULL_PARAMETER);
         return 0;
     }
@@ -482,6 +483,7 @@ int PKCS11_EC_KEY_generate_key(CK_SESSION_HANDLE session, EC_KEY *key) {
     size_t params_size;
     CBB cbb;
     if (!CBB_init(&cbb, 0) || EC_KEY_marshal_curve_name(&cbb, key->group)) {
+	printf("Weird error.\n");
         OPENSSL_PUT_ERROR(PKCS11,PKCS11_EXTRACT_ASN1_FAIL);
         return 0;
     }
@@ -521,7 +523,7 @@ int PKCS11_EC_KEY_generate_key(CK_SESSION_HANDLE session, EC_KEY *key) {
     return 1;
 }
 
-int PKCS11_ECDSA_sign(CK_SESSION_HANDLE session, const EC_KEY *key, const uint8_t *digest, size_t digest_len, uint8_t *sig, unsigned int *sig_len) {
+int PKCS11_ECDSA_sign(CK_SESSION_HANDLE session, const EC_KEY *key, const uint8_t *digest, size_t digest_len, uint8_t *sig, size_t *sig_len) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
