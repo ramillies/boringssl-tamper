@@ -19,6 +19,7 @@
 #include <openssl/rsa.h>
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
+#include <openssl/ec_key.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -76,6 +77,20 @@ int main(int argc, char **argv)
 
 	hexdump(decrypted, declen);
 
+	printf("\nAttempting to sign 'some junk text' with this key...\n");
+
+	uint8_t *signature = (uint8_t *) malloc(1024);
+	size_t siglen = 1024;
+	CHECK(PKCS11_RSA_sign(session, rsa, NID_sha512, signature, &siglen, (uint8_t *) msg, 14), "signing message with RSA.");
+
+	hexdump(signature, siglen);
+
+	printf("\nAttempting to generate ECDSA key...\n");
+	EC_KEY *ec = EC_KEY_new_by_curve_name(NID_secp521r1);
+	CHECK(PKCS11_EC_KEY_generate_key(session, ec), "generate an ECC key");
+	CHECK(PEM_write_bio_EC_PUBKEY(bio, ec), "write the ECC key to stdout");
+
+	PKCS11_logout(session);
 	PKCS11_kill();
 	return 0;
 }
