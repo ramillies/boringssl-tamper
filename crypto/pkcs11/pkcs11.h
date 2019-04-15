@@ -58,6 +58,12 @@
 #define OPENSSL_HEADER_PKCS11_PKCS11_H
 
 #include <openssl/base.h>
+#include "config.h"
+
+#ifdef ENABLE_PKCS11
+#include PKCS11_HEADER
+#include "../fipsmodule/ec/internal.h"
+#endif
 
 #if defined(__cplusplus)
 extern "C" {
@@ -65,21 +71,25 @@ extern "C" {
 
 // Init & shutdown
 
+typedef CK_SESSION_HANDLE PKCS11_session;
 int PKCS11_init(void);
 int PKCS11_kill(void);
 
+int PKCS11_login(PKCS11_session *session);
+int PKCS11_logout(PKCS11_session session);
+
 // RSA functions
 
-int PKCS11_RSA_generate_key_ex(RSA *rsa, int bits, const BIGNUM *e_value);
-int PKCS11_RSA_encrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding);
-int PKCS11_RSA_decrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding);
-int PKCS11_RSA_sign(int hash_nid, const uint8_t *in, unsigned int in_len, uint8_t *out, unsigned int *out_len, RSA *rsa);
+int PKCS11_RSA_generate_key_ex(PKCS11_session session, RSA *rsa, int bits, const BIGNUM *e_value);
+int PKCS11_RSA_encrypt(PKCS11_session session, RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding);
+int PKCS11_RSA_decrypt(PKCS11_session session, RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding);
+int PKCS11_RSA_sign(PKCS11_session session, int hash_nid, const uint8_t *in, unsigned int in_len, uint8_t *out, unsigned int *out_len, RSA *rsa);
 
 // ECDSA functions
 
-int PKCS11_EC_KEY_generate_key(EC_KEY *key);
-int PKCS11_ECDSA_sign(const uint8_t *digest, size_t digest_len, uint8_t *sig, unsigned int *sig_len, const EC_KEY *key);
-int PKCS11_ECDSA_verify(const uint8_t *digest, size_t digest_len, const uint8_t *sig, size_t sig_len, const EC_KEY *key);
+int PKCS11_EC_KEY_generate_key(PKCS11_session session, EC_KEY *key);
+int PKCS11_ECDSA_sign(PKCS11_session session, const uint8_t *digest, size_t digest_len, uint8_t *sig, unsigned int *sig_len, const EC_KEY *key);
+int PKCS11_ECDSA_verify(PKCS11_session session, const uint8_t *digest, size_t digest_len, const uint8_t *sig, size_t sig_len, const EC_KEY *key);
 
 // Error codes
 

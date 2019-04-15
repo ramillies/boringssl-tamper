@@ -79,7 +79,7 @@ static int find_the_token(CK_SLOT_ID *slot) {
     return 1;
 }
 
-static int get_session(CK_SESSION_HANDLE* session) {
+int PKCS11_login(CK_SESSION_HANDLE* session) {
     CK_RV ret;
     CK_SLOT_ID slot;
 
@@ -102,7 +102,7 @@ static int get_session(CK_SESSION_HANDLE* session) {
     return 1;
 }
 
-static int kill_session(CK_SESSION_HANDLE session)
+int PKCS11_logout(CK_SESSION_HANDLE session)
 {
 	CK_RV ret;
 	if((ret = C_Logout(session)) != CKR_OK)
@@ -192,7 +192,7 @@ static int get_rsa_key(const CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE *key, 
 
 // RSA public functions
 
-int PKCS11_RSA_generate_key_ex(RSA *rsa, int bits, const BIGNUM *e_value) {
+int PKCS11_RSA_generate_key_ex(CK_SESSION_HANDLE session, RSA *rsa, int bits, const BIGNUM *e_value) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -203,9 +203,6 @@ int PKCS11_RSA_generate_key_ex(RSA *rsa, int bits, const BIGNUM *e_value) {
     }
 
     CK_RV ret;
-    CK_SESSION_HANDLE session;
-
-    get_session(&session);
     CK_MECHANISM mech = { CKM_RSA_PKCS_KEY_PAIR_GEN, NULL_PTR, 0 };
 
     CK_ULONG ck_bits = bits;
@@ -233,21 +230,18 @@ int PKCS11_RSA_generate_key_ex(RSA *rsa, int bits, const BIGNUM *e_value) {
                             RSA_PRIV_TEMPLATE, ARRAY_SIZE(RSA_PRIV_TEMPLATE),
                             &pub_key, &priv_key)) != CKR_OK) {
         OPENSSL_PUT_ERROR(PKCS11,ret);
-	kill_session(session);
         return 0;
     }
 
     if (!fill_rsa_pub(rsa, &session, &pub_key, bits)) {
         OPENSSL_PUT_ERROR(PKCS11,PKCS11_FILL_RSA_ERR);
-	kill_session(session);
         return 0;
     }
 
-    kill_session(session);
     return 1;
 }
 
-int PKCS11_RSA_encrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding) {
+int PKCS11_RSA_encrypt(CK_SESSION_HANDLE session, RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -263,23 +257,16 @@ int PKCS11_RSA_encrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, 
     }
 
     CK_RV ret;
-    CK_SESSION_HANDLE session;
 
-    if(!get_session(&session))
-    {
-	    printf("Failed to establish a session.\n");
-	    return 0;
-    }
-
-    CK_MECHANISM_TYPE type;
+    CK_MECHANISM mech = { 0, NULL_PTR, 0 };
+    CK_RSA_PKCS_OAEP_PARAMS oaepPar = { CKM_SHA_1, CKG_MGF1_SHA1, 1, NULL_PTR, 0 };
     switch (padding) {
-        case RSA_PKCS1_PADDING : type = CKM_RSA_PKCS; break;
-        case RSA_NO_PADDING : type = CKM_RSA_X_509; break;
-        case RSA_PKCS1_OAEP_PADDING : type = CKM_RSA_PKCS_OAEP; break;
-        case RSA_PKCS1_PSS_PADDING : type = CKM_RSA_PKCS_PSS; break;
+        case RSA_PKCS1_PADDING : mech.mechanism = CKM_RSA_PKCS; break;
+        case RSA_NO_PADDING : mech.mechanism = CKM_RSA_X_509; break;
+        case RSA_PKCS1_OAEP_PADDING : mech.mechanism = CKM_RSA_PKCS_OAEP; mech.pParameter = &oaepPar; mech.ulParameterLen = sizeof(oaepPar); break;
+        case RSA_PKCS1_PSS_PADDING : mech.mechanism = CKM_RSA_PKCS_PSS; break;
         default : OPENSSL_PUT_ERROR(PKCS11, PKCS11_UNKNOWN_PADDING); return 0;
     }
-    CK_MECHANISM mech = { type, NULL_PTR, 0 };
 
     CK_OBJECT_HANDLE public;
     if (!get_rsa_key(&session, &public, rsa, CKO_PUBLIC_KEY)) {
@@ -301,7 +288,7 @@ int PKCS11_RSA_encrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, 
     return 1;
 }
 
-int PKCS11_RSA_decrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding) {
+int PKCS11_RSA_decrypt(CK_SESSION_HANDLE session, RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -317,19 +304,16 @@ int PKCS11_RSA_decrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, 
     }
 
     CK_RV ret;
-    CK_SESSION_HANDLE session;
 
-    get_session(&session);
-
-    CK_MECHANISM_TYPE type;
+    CK_MECHANISM mech = { 0, NULL_PTR, 0 };
+    CK_RSA_PKCS_OAEP_PARAMS oaepPar = { CKM_SHA_1, CKG_MGF1_SHA1, 1, NULL_PTR, 0 };
     switch (padding) {
-        case RSA_PKCS1_PADDING : type = CKM_RSA_PKCS; break;
-        case RSA_NO_PADDING : type = CKM_RSA_X_509; break;
-        case RSA_PKCS1_OAEP_PADDING : type = CKM_RSA_PKCS_OAEP; break;
-        case RSA_PKCS1_PSS_PADDING : type = CKM_RSA_PKCS_PSS; break;
+        case RSA_PKCS1_PADDING : mech.mechanism = CKM_RSA_PKCS; break;
+        case RSA_NO_PADDING : mech.mechanism = CKM_RSA_X_509; break;
+        case RSA_PKCS1_OAEP_PADDING : mech.mechanism = CKM_RSA_PKCS_OAEP; mech.pParameter = &oaepPar; mech.ulParameterLen = sizeof(oaepPar); break;
+        case RSA_PKCS1_PSS_PADDING : mech.mechanism = CKM_RSA_PKCS_PSS; break;
         default : OPENSSL_PUT_ERROR(PKCS11, PKCS11_UNKNOWN_PADDING); return 0;
     }
-    CK_MECHANISM mech = { type, NULL_PTR, 0 };
 
     CK_OBJECT_HANDLE private;
     if (!get_rsa_key(&session, &private, rsa, CKO_PRIVATE_KEY))
@@ -347,7 +331,7 @@ int PKCS11_RSA_decrypt(RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, 
     return 1;
 }
 
-int PKCS11_RSA_sign(int hash_nid, const uint8_t *in, unsigned int in_len, uint8_t *out, unsigned int *out_len, RSA *rsa) {
+int PKCS11_RSA_sign(CK_SESSION_HANDLE session, int hash_nid, const uint8_t *in, unsigned int in_len, uint8_t *out, unsigned int *out_len, RSA *rsa) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -358,9 +342,6 @@ int PKCS11_RSA_sign(int hash_nid, const uint8_t *in, unsigned int in_len, uint8_
     }
 
     CK_RV ret;
-    CK_SESSION_HANDLE session;
-
-    get_session(&session);
 
     CK_MECHANISM_TYPE type;
     switch(hash_nid) {
@@ -484,7 +465,7 @@ static int get_ec_key(const CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE *key, c
 
 // ECDSA public functions
 
-int PKCS11_EC_KEY_generate_key(EC_KEY *key) {
+int PKCS11_EC_KEY_generate_key(CK_SESSION_HANDLE session, EC_KEY *key) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -495,9 +476,6 @@ int PKCS11_EC_KEY_generate_key(EC_KEY *key) {
     }
 
     CK_RV ret;
-    CK_SESSION_HANDLE session;
-
-    get_session(&session);
     CK_MECHANISM mech = { CKM_EC_KEY_PAIR_GEN, NULL_PTR, 0 };
 
     CK_BYTE *params;
@@ -543,7 +521,7 @@ int PKCS11_EC_KEY_generate_key(EC_KEY *key) {
     return 1;
 }
 
-int PKCS11_ECDSA_sign(const uint8_t *digest, size_t digest_len, uint8_t *sig, unsigned int *sig_len, const EC_KEY *key) {
+int PKCS11_ECDSA_sign(CK_SESSION_HANDLE session, const uint8_t *digest, size_t digest_len, uint8_t *sig, unsigned int *sig_len, const EC_KEY *key) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -554,9 +532,6 @@ int PKCS11_ECDSA_sign(const uint8_t *digest, size_t digest_len, uint8_t *sig, un
     }
 
     CK_RV ret;
-    CK_SESSION_HANDLE session;
-
-    get_session(&session);
     CK_MECHANISM mech = { CKM_ECDSA, NULL_PTR, 0 };
 
     CK_OBJECT_HANDLE private;
@@ -578,7 +553,7 @@ int PKCS11_ECDSA_sign(const uint8_t *digest, size_t digest_len, uint8_t *sig, un
     return 1;
 }
 
-int PKCS11_ECDSA_verify(const uint8_t *digest, size_t digest_len, const uint8_t *sig, size_t sig_len, const EC_KEY *key) {
+int PKCS11_ECDSA_verify(CK_SESSION_HANDLE session, const uint8_t *digest, size_t digest_len, const uint8_t *sig, size_t sig_len, const EC_KEY *key) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -589,9 +564,6 @@ int PKCS11_ECDSA_verify(const uint8_t *digest, size_t digest_len, const uint8_t 
     }
 
     CK_RV ret;
-    CK_SESSION_HANDLE session;
-
-    get_session(&session);
     CK_MECHANISM mech = { CKM_ECDSA, NULL_PTR, 0 };
 
     CK_OBJECT_HANDLE public;
