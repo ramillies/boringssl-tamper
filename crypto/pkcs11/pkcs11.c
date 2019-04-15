@@ -241,7 +241,7 @@ int PKCS11_RSA_generate_key_ex(CK_SESSION_HANDLE session, RSA *rsa, int bits, co
     return 1;
 }
 
-int PKCS11_RSA_encrypt(CK_SESSION_HANDLE session, RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding) {
+int PKCS11_RSA_encrypt(CK_SESSION_HANDLE session, RSA *rsa, uint8_t *out, size_t *out_len, size_t max_out, const uint8_t *in, size_t in_len, int padding) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -288,7 +288,7 @@ int PKCS11_RSA_encrypt(CK_SESSION_HANDLE session, RSA *rsa, size_t *out_len, uin
     return 1;
 }
 
-int PKCS11_RSA_decrypt(CK_SESSION_HANDLE session, RSA *rsa, size_t *out_len, uint8_t *out, size_t max_out, const uint8_t *in, size_t in_len, int padding) {
+int PKCS11_RSA_decrypt(CK_SESSION_HANDLE session, RSA *rsa, uint8_t *out, size_t *out_len, size_t max_out, const uint8_t *in, size_t in_len, int padding) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -331,7 +331,7 @@ int PKCS11_RSA_decrypt(CK_SESSION_HANDLE session, RSA *rsa, size_t *out_len, uin
     return 1;
 }
 
-int PKCS11_RSA_sign(CK_SESSION_HANDLE session, int hash_nid, const uint8_t *in, unsigned int in_len, uint8_t *out, unsigned int *out_len, RSA *rsa) {
+int PKCS11_RSA_sign(CK_SESSION_HANDLE session, RSA *rsa, int hash_nid, uint8_t *out, unsigned int *out_len, const uint8_t *in, unsigned int in_len) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -521,7 +521,7 @@ int PKCS11_EC_KEY_generate_key(CK_SESSION_HANDLE session, EC_KEY *key) {
     return 1;
 }
 
-int PKCS11_ECDSA_sign(CK_SESSION_HANDLE session, const uint8_t *digest, size_t digest_len, uint8_t *sig, unsigned int *sig_len, const EC_KEY *key) {
+int PKCS11_ECDSA_sign(CK_SESSION_HANDLE session, const EC_KEY *key, const uint8_t *digest, size_t digest_len, uint8_t *sig, unsigned int *sig_len) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -553,7 +553,7 @@ int PKCS11_ECDSA_sign(CK_SESSION_HANDLE session, const uint8_t *digest, size_t d
     return 1;
 }
 
-int PKCS11_ECDSA_verify(CK_SESSION_HANDLE session, const uint8_t *digest, size_t digest_len, const uint8_t *sig, size_t sig_len, const EC_KEY *key) {
+int PKCS11_ECDSA_verify(CK_SESSION_HANDLE session, const EC_KEY *key, const uint8_t *digest, size_t digest_len, const uint8_t *sig, size_t sig_len) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;

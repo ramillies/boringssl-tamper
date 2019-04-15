@@ -50,15 +50,17 @@ bool GenerateRSAKeyPKCS11(const std::vector<std::string> &args) {
   bssl::UniquePtr<RSA> rsa(RSA_new());
   bssl::UniquePtr<BIGNUM> e(BN_new());
   bssl::UniquePtr<BIO> bio(BIO_new_fp(stdout, BIO_NOCLOSE));
+  PKCS11_session session;
 
   if (!PKCS11_init() ||
+      !PKCS11_login(&session) ||
       !BN_set_word(e.get(), RSA_F4) ||
-      !PKCS11_RSA_generate_key_ex(rsa.get(), bits, e.get()) ||
+      !PKCS11_RSA_generate_key_ex(session, rsa.get(), bits, e.get()) ||
       !PEM_write_bio_RSAPublicKey(bio.get(), rsa.get())) {
     ERR_print_errors_fp(stderr);
     return false;
   }
-
+  PKCS11_logout(session);
   PKCS11_kill();
   return true;
 }

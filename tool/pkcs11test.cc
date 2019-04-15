@@ -33,13 +33,12 @@ extern "C" {
 
 static void hexdump(uint8_t *buf, size_t howmuch)
 {
-	size_t byte;
-	for(byte = 0; byte < howmuch; byte++)
+	for(size_t byte = 0; byte < howmuch; byte++)
 	{
+		if((byte > 0) && !(byte % 32)) printf("\n");
 		printf("%02hhX ", buf[byte]);
-		if((byte > 0) && !(byte % 64)) printf("\n");
 	}
-	if(byte % 64) printf("\n");
+	printf("\n");
 }
 
 int main(int argc, char **argv)
@@ -47,6 +46,9 @@ int main(int argc, char **argv)
 	printf("PKCS#11 tests started.\n\n");
 
 	PKCS11_init();
+	CK_SESSION_HANDLE session;
+
+	CHECK(PKCS11_login(&session), "log in");
 
 	printf("Generating RSA key...\n");
 	RSA *rsa = RSA_new();
@@ -54,17 +56,25 @@ int main(int argc, char **argv)
 	BIO *bio = BIO_new_fp(stdout, BIO_NOCLOSE);
 
 	CHECK(BN_set_word(e, RSA_F4), "set the public exponent");
-	CHECK(PKCS11_RSA_generate_key_ex(rsa, 2048, e), "generate the RSA keys");
+	CHECK(PKCS11_RSA_generate_key_ex(session, rsa, 2048, e), "generate the RSA keys");
 	CHECK(PEM_write_bio_RSAPublicKey(bio, rsa), "write the public RSA key into stdout.");
 
 	printf("\nAttempting to encrypt the text 'some junk text' with this key...\n");
 	
 	char msg[] = "some junk text";
-	char *out = (char *) malloc(1024);
-	size_t outlen = 1024;
-	CHECK(PKCS11_RSA_encrypt(rsa, &outlen, (uint8_t *) out, 1024, (uint8_t *) msg, 14, RSA_PKCS1_OAEP_PADDING), "encode message with RSA");
+	uint8_t *encrypted = (uint8_t *) malloc(1024);
+	size_t enclen = 1024;
+	CHECK(PKCS11_RSA_encrypt(session, rsa, encrypted, &enclen, 1024, (uint8_t *) msg, 14, RSA_PKCS1_PADDING), "encode message with RSA");
 
-	hexdump((uint8_t *) out, outlen);
+	hexdump(encrypted, enclen);
+
+	printf("\nAttempting to decrypt it back...\n");
+
+	uint8_t *decrypted = (uint8_t *) malloc(1024);
+	size_t declen = 1024;
+	CHECK(PKCS11_RSA_decrypt(session, rsa, decrypted, &declen, 1024, encrypted, enclen, RSA_PKCS1_PADDING), "decode message with RSA");
+
+	hexdump(decrypted, declen);
 
 	PKCS11_kill();
 	return 0;
