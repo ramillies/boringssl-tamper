@@ -80,7 +80,7 @@ int main(int argc, char **argv)
 	printf("\nAttempting to sign 'some junk text' with this key...\n");
 
 	uint8_t *signature = (uint8_t *) malloc(1024);
-	unsigned int siglen = 1024;
+	size_t siglen = 1024;
 	CHECK(PKCS11_RSA_sign(session, rsa, NID_sha512, signature, &siglen, (uint8_t *) msg, 14), "signing message with RSA.");
 
 	hexdump(signature, siglen);
