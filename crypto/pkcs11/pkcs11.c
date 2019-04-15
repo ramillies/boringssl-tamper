@@ -10,8 +10,7 @@
 
 #ifdef ENABLE_PKCS11
     #include PKCS11_HEADER
-#include "../fipsmodule/ec/internal.h"
-
+    #include "../fipsmodule/ec/internal.h"
 #endif
 
 #define BUFFER_MAX_ECPOINT_LEN ((528*2 / 8) + 1)
@@ -25,6 +24,10 @@ static CK_BBOOL CFALSE = FALSE;
 
 int PKCS11_init(void)
 {
+#ifndef ENABLE_PKCS11
+    OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
+    return 0;
+#endif
 	CK_RV ret;
 	if ((ret = C_Initialize(NULL)) != CKR_OK) {
 		OPENSSL_PUT_ERROR(PKCS11,ret);
@@ -35,6 +38,10 @@ int PKCS11_init(void)
 
 int PKCS11_kill(void)
 {
+#ifndef ENABLE_PKCS11
+    OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
+    return 0;
+#endif
 	CK_RV ret;
 	if ((ret = C_Finalize(NULL)) != CKR_OK) {
 		OPENSSL_PUT_ERROR(PKCS11,ret);
@@ -80,6 +87,10 @@ static int find_the_token(CK_SLOT_ID *slot) {
 }
 
 int PKCS11_login(CK_SESSION_HANDLE* session) {
+#ifndef ENABLE_PKCS11
+    OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
+    return 0;
+#endif
     CK_RV ret;
     CK_SLOT_ID slot;
 
@@ -104,7 +115,11 @@ int PKCS11_login(CK_SESSION_HANDLE* session) {
 
 int PKCS11_logout(CK_SESSION_HANDLE session)
 {
-	CK_RV ret;
+#ifndef ENABLE_PKCS11
+    OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
+    return 0;
+#endif
+    CK_RV ret;
 	if((ret = C_Logout(session)) != CKR_OK)
 	{
 		printf("Failed to log out.\n");
@@ -176,13 +191,11 @@ static int get_rsa_key(const CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE *key, 
     }
 
     if (count < 1UL) {
-	printf("No objects found.\n");
         OPENSSL_PUT_ERROR(PKCS11,PKCS11_OBJECT_NOT_FOUND);
         return 0;
     }
 
     if ((ret = C_FindObjectsFinal(*session)) != CKR_OK) {
-	printf("Cannot finalize finding objects.\n");
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
@@ -198,7 +211,7 @@ int PKCS11_RSA_generate_key_ex(CK_SESSION_HANDLE session, RSA *rsa, int bits, co
     return 0;
 #endif
     if (!rsa || !e_value) {
-        OPENSSL_PUT_ERROR(PKCS11,PKCS11_NULL_PARAMETER);
+        OPENSSL_PUT_ERROR(PKCS11,ERR_R_PASSED_NULL_PARAMETER);
         return 0;
     }
 
@@ -247,12 +260,12 @@ int PKCS11_RSA_encrypt(CK_SESSION_HANDLE session, RSA *rsa, uint8_t *out, size_t
     return 0;
 #endif
     if (rsa->n == NULL || rsa->e == NULL) {
-        OPENSSL_PUT_ERROR(PKCS11, PKCS11_NULL_PARAMETER);
+        OPENSSL_PUT_ERROR(PKCS11, ERR_R_PASSED_NULL_PARAMETER);
         return 0;
     }
 
     if (max_out < RSA_size(rsa)) {
-        OPENSSL_PUT_ERROR(PKCS11, PKCS11_OUT_BUFFER_TOO_SMALL);
+        OPENSSL_PUT_ERROR(PKCS11, ERR_R_OVERFLOW);
         return 0;
     }
 
@@ -270,18 +283,15 @@ int PKCS11_RSA_encrypt(CK_SESSION_HANDLE session, RSA *rsa, uint8_t *out, size_t
 
     CK_OBJECT_HANDLE public;
     if (!get_rsa_key(&session, &public, rsa, CKO_PUBLIC_KEY)) {
-	printf("Failed to get the RSA key.\n");
         return 0;
     }
 
     if ((ret = C_EncryptInit(session, &mech, public)) != CKR_OK) {
-	printf("Failed to initialize RSA encryption with %lu.\n", ret);
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
 
     if ((ret = C_Encrypt(session, (unsigned char*)in, in_len, out, out_len)) != CKR_OK) {
-	printf("Failed to perform RSA encryption with %lu.\n", ret);
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
@@ -294,12 +304,12 @@ int PKCS11_RSA_decrypt(CK_SESSION_HANDLE session, RSA *rsa, uint8_t *out, size_t
     return 0;
 #endif
     if (rsa->n == NULL || rsa->e == NULL) {
-        OPENSSL_PUT_ERROR(PKCS11, PKCS11_NULL_PARAMETER);
+        OPENSSL_PUT_ERROR(PKCS11, ERR_R_PASSED_NULL_PARAMETER);
         return 0;
     }
 
     if (max_out < RSA_size(rsa)) {
-        OPENSSL_PUT_ERROR(PKCS11, PKCS11_OUT_BUFFER_TOO_SMALL);
+        OPENSSL_PUT_ERROR(PKCS11, ERR_R_OVERFLOW);
         return 0;
     }
 
@@ -337,7 +347,7 @@ int PKCS11_RSA_sign(CK_SESSION_HANDLE session, RSA *rsa, int hash_nid, uint8_t *
     return 0;
 #endif
     if (rsa->n == NULL || rsa->e == NULL) {
-        OPENSSL_PUT_ERROR(PKCS11, PKCS11_NULL_PARAMETER);
+        OPENSSL_PUT_ERROR(PKCS11, ERR_R_PASSED_NULL_PARAMETER);
         return 0;
     }
 
@@ -471,8 +481,7 @@ int PKCS11_EC_KEY_generate_key(CK_SESSION_HANDLE session, EC_KEY *key) {
     return 0;
 #endif
     if (!key || !(key->group)) {
-	printf("Null parameter given to ECC key generation.\n");
-        OPENSSL_PUT_ERROR(PKCS11,PKCS11_NULL_PARAMETER);
+        OPENSSL_PUT_ERROR(PKCS11,ERR_R_PASSED_NULL_PARAMETER);
         return 0;
     }
 
@@ -489,16 +498,12 @@ int PKCS11_EC_KEY_generate_key(CK_SESSION_HANDLE session, EC_KEY *key) {
     }
     CBB_finish(&cbb, &params, &params_size);
 
-    CK_OBJECT_CLASS class = CKO_PUBLIC_KEY;
     CK_ATTRIBUTE RSA_PUB_TEMPLATE[] = {
-            { CKA_CLASS, &class, sizeof(class) },
             { CKA_TOKEN, &CTRUE, sizeof(CTRUE) },
             { CKA_EC_PARAMS, params, sizeof(params)},
     };
 
-    class = CKO_PRIVATE_KEY;
     CK_ATTRIBUTE RSA_PRIV_TEMPLATE[] = {
-            { CKA_CLASS, &class, sizeof(class) },
             { CKA_TOKEN, &CTRUE, sizeof(CTRUE) },
             { CKA_SENSITIVE, &CTRUE, sizeof(CTRUE) },
             { CKA_DERIVE, &CTRUE, sizeof(CTRUE) },
@@ -529,7 +534,7 @@ int PKCS11_ECDSA_sign(CK_SESSION_HANDLE session, const EC_KEY *key, const uint8_
     return 0;
 #endif
     if (key == NULL || digest == NULL) {
-        OPENSSL_PUT_ERROR(PKCS11, PKCS11_NULL_PARAMETER);
+        OPENSSL_PUT_ERROR(PKCS11, ERR_R_PASSED_NULL_PARAMETER);
         return 0;
     }
 
@@ -561,7 +566,7 @@ int PKCS11_ECDSA_verify(CK_SESSION_HANDLE session, const EC_KEY *key, const uint
     return 0;
 #endif
     if (key == NULL || digest == NULL || sig == NULL) {
-        OPENSSL_PUT_ERROR(PKCS11, PKCS11_NULL_PARAMETER);
+        OPENSSL_PUT_ERROR(PKCS11, ERR_R_PASSED_NULL_PARAMETER);
         return 0;
     }
 
