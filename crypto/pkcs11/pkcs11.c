@@ -50,7 +50,7 @@ int PKCS11_kill(void)
 	return 1;
 }
 
-static int find_the_token(CK_SLOT_ID *slot) {
+static int find_the_token(CK_SLOT_ID *slot, const char *label) {
     CK_RV ret;
 
     /* get slot list: */
@@ -73,7 +73,7 @@ static int find_the_token(CK_SLOT_ID *slot) {
             OPENSSL_PUT_ERROR(PKCS11,ret);
             return 0;
         }
-        if (memcmp(PKCS11_TOKEN_LABEL, token.label, strlen(PKCS11_TOKEN_LABEL)) == 0) {
+        if (memcmp(label, token.label, strlen(label)) == 0) {
             token_found = 1;
             *slot = slots[i];
             break;
@@ -86,7 +86,7 @@ static int find_the_token(CK_SLOT_ID *slot) {
     return 1;
 }
 
-int PKCS11_login(CK_SESSION_HANDLE* session) {
+int PKCS11_login(CK_SESSION_HANDLE* session, const char *label, unsigned char *pin, size_t pinlength) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -94,7 +94,7 @@ int PKCS11_login(CK_SESSION_HANDLE* session) {
     CK_RV ret;
     CK_SLOT_ID slot;
 
-    if (!find_the_token(&slot)) {
+    if (!find_the_token(&slot, label)) {
         return 0;
     }
 
@@ -103,7 +103,7 @@ int PKCS11_login(CK_SESSION_HANDLE* session) {
         return 0;
     }
 
-    if ((ret = C_Login(*session, CKU_USER, (unsigned char*)PKCS11_TOKEN_PIN, strlen(PKCS11_TOKEN_PIN))) != CKR_OK) {
+    if ((ret = C_Login(*session, CKU_USER, pin, pinlength)) != CKR_OK) {
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }

@@ -27,6 +27,7 @@
 
 #include "internal.h"
 #include "../crypto/pkcs11/pkcs11.h"
+#include "../crypto/pkcs11/config.h"
 
 #define CHECK(what, msg) if(!(what)) { printf("Failed to %s.\n", msg); }
 
@@ -49,7 +50,7 @@ int main(int argc, char **argv)
 	PKCS11_init();
 	CK_SESSION_HANDLE session;
 
-	CHECK(PKCS11_login(&session), "log in");
+	CHECK(PKCS11_login(&session, PKCS11_TOKEN_LABEL, (unsigned char *) PKCS11_TOKEN_PIN, strlen(PKCS11_TOKEN_PIN)), "log in");
 
 	printf("Generating RSA key...\n");
 	RSA *rsa = RSA_new();

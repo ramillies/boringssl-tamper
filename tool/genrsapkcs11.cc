@@ -21,6 +21,7 @@
 
 #include "internal.h"
 #include "../crypto/pkcs11/pkcs11.h"
+#include "../crypto/pkcs11/config.h"
 
 
 static const struct argument kArguments[] = {
@@ -53,7 +54,7 @@ bool GenerateRSAKeyPKCS11(const std::vector<std::string> &args) {
   PKCS11_session session;
 
   if (!PKCS11_init() ||
-      !PKCS11_login(&session) ||
+      !PKCS11_login(&session, PKCS11_TOKEN_LABEL, (unsigned char *) PKCS11_TOKEN_PIN, strlen(PKCS11_TOKEN_PIN)) ||
       !BN_set_word(e.get(), RSA_F4) ||
       !PKCS11_RSA_generate_key_ex(session, rsa.get(), bits, e.get()) ||
       !PEM_write_bio_RSAPublicKey(bio.get(), rsa.get())) {

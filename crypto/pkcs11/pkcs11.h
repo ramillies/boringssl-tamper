@@ -86,15 +86,18 @@ int PKCS11_init(void);
 int PKCS11_kill(void);
 
 /**
- * Log into the specified token
- * @param session Pointer to a session handler
+ * Establish a session and log into the given token. If successful, the session handle is returned in the first parameter.
+ * @param session Pointer to a session handle.
+ * @param label Label of the token to log into.
+ * @param pin The user PIN for logging into the token.
+ * @param pinlength Length of the PIN.
  * @return 1 on success, 0 otherwise
  */
-int PKCS11_login(PKCS11_session *session);
+int PKCS11_login(PKCS11_session *session, const char *label, unsigned char *pin, size_t pinlength);
 
 /**
  * Log out from the specified token
- * @param session Pointer to a session handler
+ * @param session Session handle to close
  * @return 1 on success, 0 otherwise
  */
 int PKCS11_logout(PKCS11_session session);
@@ -102,8 +105,8 @@ int PKCS11_logout(PKCS11_session session);
 // RSA functions
 
 /**
- * Generate RSA key pair, stores it in the token and export public key informaion (N, e) to provided RSA structure
- * @param session Pointer to the session handler
+ * Generate RSA key pair, store it on the token and export the public key informaion (N, e) into the provided RSA structure
+ * @param session Session handle
  * @param rsa RSA key structure
  * @param bits Number of modulus bits
  * @param e_value Public exponent
@@ -113,7 +116,7 @@ int PKCS11_RSA_generate_key_ex(PKCS11_session session, RSA *rsa, int bits, const
 
 /**
  * Encrypts provided data with the public key stored in a token according to the parameters in RSA structure
- * @param session Session handler
+ * @param session Session handle
  * @param rsa RSA key structure
  * @param out Output buffer for encrypted data
  * @param out_len Output length
@@ -127,7 +130,7 @@ int PKCS11_RSA_encrypt(PKCS11_session session, RSA *rsa, uint8_t *out, size_t *o
 
 /**
  * Decrypts provided data with the private key stored in a token according to the parameters in RSA structure
- * @param session Session handler
+ * @param session Session handle
  * @param rsa RSA key structure
  * @param out Output buffer
  * @param out_len Output length
@@ -141,7 +144,7 @@ int PKCS11_RSA_decrypt(PKCS11_session session, RSA *rsa, uint8_t *out, size_t *o
 
 /**
  * Sign provided data with the private key stored in a token according to the parameters in RSA structure
- * @param session Session handler
+ * @param session Session handle
  * @param rsa RSA key structure
  * @param hash_nid ID of hash to use
  * @param out Output buffer
@@ -154,7 +157,7 @@ int PKCS11_RSA_sign(PKCS11_session session, RSA *rsa, int hash_nid, uint8_t *out
 
 /**
  * Verify, whether the hash of signed data corresponds to the provided message
- * @param session Session handler
+ * @param session Session handle
  * @param rsa RSA key structure
  * @param hash_nid ID of hash to use
  * @param msg Plaintext message
@@ -169,7 +172,7 @@ int PKCS11_RSA_verify(PKCS11_session session, RSA *rsa, int hash_nid, uint8_t *m
 
 /**
  * Generates ECC key, stores it into the token and export the public data into the provided EC_KEY structure
- * @param session Session handler
+ * @param session Session handle
  * @param key ECC key structure with set group
  * @return 1 on success, 0 otherwise
  */
@@ -177,7 +180,7 @@ int PKCS11_EC_KEY_generate_key(PKCS11_session session, EC_KEY *key);
 
 /**
  * Sign provided data with the private key stored in a token according to the parameters in ECC structure
- * @param session Session handler
+ * @param session Session handle
  * @param key EC_KEY key structure
  * @param digest Hash of the data to be signed
  * @param digest_len Hash byte size
@@ -189,7 +192,7 @@ int PKCS11_ECDSA_sign(PKCS11_session session, const EC_KEY *key, const uint8_t *
 
 /**
  * Verify, whether the hash of signed data corresponds to the provided hash
- * @param session Session handler
+ * @param session Session handle
  * @param key EC_KEY key structure
  * @param digest Hash of the data to be signed
  * @param digest_len Hash byte size

@@ -18,6 +18,7 @@
 
 #include "../internal.h"
 #include "pkcs11.h"
+#include "config.h"
 
 bssl::UniquePtr<RSA> rsa(RSA_new());
 bssl::UniquePtr<EC_KEY> ec(EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
@@ -26,7 +27,7 @@ TEST(PKCS11Test, RSAKeyGen) {
 #ifdef ENABLE_PKCS11
     PKCS11_init();
     CK_SESSION_HANDLE session;
-    ASSERT_TRUE(PKCS11_login(&session));
+    ASSERT_TRUE(PKCS11_login(&session, PKCS11_TOKEN_LABEL, (unsigned char *) PKCS11_TOKEN_PIN, strlen(PKCS11_TOKEN_PIN)));
 
     bssl::UniquePtr<BIGNUM> e(BN_new());
     BN_set_word(e.get(), RSA_F4);
@@ -44,7 +45,7 @@ TEST(PKCS11Test, RSAEncryptDecrypt) {
 #ifdef ENABLE_PKCS11
     PKCS11_init();
     CK_SESSION_HANDLE session;
-    ASSERT_TRUE(PKCS11_login(&session));
+    ASSERT_TRUE(PKCS11_login(&session, PKCS11_TOKEN_LABEL, (unsigned char *) PKCS11_TOKEN_PIN, strlen(PKCS11_TOKEN_PIN)));
 
     unsigned char msg[] = "some junk text";
     unsigned char encrypted[256];
@@ -67,7 +68,7 @@ TEST(PKCS11Test, RSASignVerify) {
 #ifdef ENABLE_PKCS11
     PKCS11_init();
     CK_SESSION_HANDLE session;
-    ASSERT_TRUE(PKCS11_login(&session));
+    ASSERT_TRUE(PKCS11_login(&session, PKCS11_TOKEN_LABEL, (unsigned char *) PKCS11_TOKEN_PIN, strlen(PKCS11_TOKEN_PIN)));
 
     unsigned char msg[] = "testing string";
     unsigned char signature[256];
@@ -85,7 +86,7 @@ TEST(PKCS11, ECKeyGen) {
 #ifdef ENABLE_PKCS11
     PKCS11_init();
     CK_SESSION_HANDLE session;
-    ASSERT_TRUE(PKCS11_login(&session));
+    ASSERT_TRUE(PKCS11_login(&session, PKCS11_TOKEN_LABEL, (unsigned char *) PKCS11_TOKEN_PIN, strlen(PKCS11_TOKEN_PIN)));
 
     ASSERT_TRUE(PKCS11_EC_KEY_generate_key(session, ec.get()));
 
@@ -98,7 +99,7 @@ TEST(PKCS11, ECDSASignVerify) {
 #ifdef ENABLE_PKCS11
     PKCS11_init();
     CK_SESSION_HANDLE session;
-    ASSERT_TRUE(PKCS11_login(&session));
+    ASSERT_TRUE(PKCS11_login(&session, PKCS11_TOKEN_LABEL, (unsigned char *) PKCS11_TOKEN_PIN, strlen(PKCS11_TOKEN_PIN)));
 
     unsigned char hash[] = "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD";
     unsigned char signature[256];
