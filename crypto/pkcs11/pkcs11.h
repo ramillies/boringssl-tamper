@@ -152,6 +152,19 @@ int PKCS11_RSA_decrypt(PKCS11_session session, RSA *rsa, uint8_t *out, size_t *o
  */
 int PKCS11_RSA_sign(PKCS11_session session, RSA *rsa, int hash_nid, uint8_t *out, size_t *out_len, const uint8_t *in, size_t in_len);
 
+/**
+ * Verify, whether the hash of signed data corresponds to the provided message
+ * @param session Session handler
+ * @param rsa RSA key structure
+ * @param hash_nid ID of hash to use
+ * @param msg Plaintext message
+ * @param msg_len Message length
+ * @param signature Signed message
+ * @param sig_len Signature length
+ * @return 1 if the verification succeeded, 0 otherwise
+ */
+int PKCS11_RSA_verify(PKCS11_session session, RSA *rsa, int hash_nid, uint8_t *msg, size_t msg_len, const uint8_t *signature, size_t sig_len);
+
 // ECDSA functions
 
 /**
