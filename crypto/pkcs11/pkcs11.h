@@ -166,7 +166,7 @@ int PKCS11_RSA_sign(PKCS11_session session, RSA *rsa, int hash_nid, uint8_t *out
  * @param sig_len Signature length
  * @return 1 if the verification succeeded, 0 otherwise
  */
-int PKCS11_RSA_verify(PKCS11_session session, RSA *rsa, int hash_nid, uint8_t *msg, size_t msg_len, const uint8_t *signature, size_t sig_len);
+int PKCS11_RSA_verify(PKCS11_session session, RSA *rsa, int hash_nid, uint8_t *msg, size_t msg_len, const uint8_t *signature, size_t sig_len, int *correct);
 
 // ECDSA functions
 

@@ -73,9 +73,11 @@ TEST(PKCS11Test, RSASignVerify) {
     unsigned char msg[] = "testing string";
     unsigned char signature[256];
     size_t siglen = 256;
+    int ok;
 
     ASSERT_TRUE(PKCS11_RSA_sign(session, rsa.get(), NID_sha512, signature, &siglen, msg, 14));
-    ASSERT_TRUE(PKCS11_RSA_verify(session, rsa.get(), NID_sha512, msg, 14, signature, siglen));
+    ASSERT_TRUE(PKCS11_RSA_verify(session, rsa.get(), NID_sha512, msg, 14, signature, siglen, &ok));
+    ASSERT_TRUE(ok);
 
     PKCS11_logout(session);
     PKCS11_kill();

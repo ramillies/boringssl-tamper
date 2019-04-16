@@ -29,7 +29,7 @@
 #include "../crypto/pkcs11/pkcs11.h"
 #include "../crypto/pkcs11/config.h"
 
-#define CHECK(what, msg) if(!(what)) { printf("Failed to %s.\n", msg); }
+#define CHECK(what, msg) if(!(what)) { printf("Failed to %s.\n", msg); exit(1); }
 
 extern "C" {
 
@@ -85,6 +85,18 @@ int main(int argc, char **argv)
 	CHECK(PKCS11_RSA_sign(session, rsa, NID_sha512, signature, &siglen, (uint8_t *) msg, 14), "signing message with RSA.");
 
 	hexdump(signature, siglen);
+
+	printf("\nAttempting to verify the signature...\n");
+	int ok;
+	CHECK(PKCS11_RSA_verify(session, rsa, NID_sha512, (uint8_t *) msg, 14, signature, siglen, &ok), "verifying RSA signature.");
+	printf("The signature is %svalid.\n", ok ? "" : "in");
+
+	printf("\nAttempting to verify the signature, but with a modified text...\n");
+	memcpy(msg + 5, "crap", 4);
+	printf("Modified message: '%s'\n", msg);
+	CHECK(PKCS11_RSA_verify(session, rsa, NID_sha512, (uint8_t *) msg, 14, signature, siglen, &ok), "verifying RSA signature.");
+	printf("The signature is %svalid.\n", ok ? "" : "in");
+
 
 	printf("\nAttempting to generate ECDSA key...\n");
 	EC_KEY *ec = EC_KEY_new_by_curve_name(NID_secp521r1);
