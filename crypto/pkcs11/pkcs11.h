@@ -150,7 +150,7 @@ int PKCS11_RSA_decrypt(PKCS11_session session, RSA *rsa, uint8_t *out, size_t *o
  * @param in_len Input byte length
  * @return 1 on success, 0 otherwise
  */
-int PKCS11_RSA_sign(PKCS11_session session, RSA *rsa, int hash_nid, uint8_t *out, unsigned int *out_len, const uint8_t *in, size_t in_len);
+int PKCS11_RSA_sign(PKCS11_session session, RSA *rsa, int hash_nid, uint8_t *out, size_t *out_len, const uint8_t *in, size_t in_len);
 
 // ECDSA functions
 
