@@ -100,12 +100,10 @@ int PKCS11_login(CK_SESSION_HANDLE* session) {
 
     if ((ret = C_OpenSession(slot, CKF_RW_SESSION | CKF_SERIAL_SESSION, NULL_PTR, NULL_PTR, session)) != CKR_OK) {
         OPENSSL_PUT_ERROR(PKCS11,ret);
-	printf("Failed to open a session with %lu.\n", ret);
         return 0;
     }
 
     if ((ret = C_Login(*session, CKU_USER, (unsigned char*)PKCS11_TOKEN_PIN, strlen(PKCS11_TOKEN_PIN))) != CKR_OK) {
-	printf("Failed to login with %lu.\n", ret);
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
@@ -122,12 +120,10 @@ int PKCS11_logout(CK_SESSION_HANDLE session)
     CK_RV ret;
 	if((ret = C_Logout(session)) != CKR_OK)
 	{
-		printf("Failed to log out.\n");
 		return 0;
 	}
 	if((ret = C_CloseSession(session)) != CKR_OK)
 	{
-		printf("Failed to close the session.\n");
 		return 0;
 	}
 
@@ -178,14 +174,12 @@ static int get_rsa_key(const CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE *key, 
     };
 
     if ((ret = C_FindObjectsInit(*session, templ, 5)) != CKR_OK) {
-	printf("Cannot init finding objects with %lu.\n", ret);
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
 
     CK_ULONG count;
     if ((ret = C_FindObjects(*session, key, 1, &count)) != CKR_OK) {
-	printf("Cannot do finding objects.\n");
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
@@ -387,6 +381,50 @@ int PKCS11_RSA_sign(CK_SESSION_HANDLE session, RSA *rsa, int hash_nid, uint8_t *
     return 1;
 }
 
+int PKCS11_RSA_verify(PKCS11_session session, RSA *rsa, int hash_nid, uint8_t *msg, size_t msg_len, const uint8_t *signature, size_t sig_len) {
+#ifndef ENABLE_PKCS11
+    OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
+    return 0;
+#endif
+    if (rsa->n == NULL || rsa->e == NULL) {
+        OPENSSL_PUT_ERROR(PKCS11, ERR_R_PASSED_NULL_PARAMETER);
+        return 0;
+    }
+
+    CK_RV ret;
+
+    CK_MECHANISM_TYPE type;
+    switch(hash_nid) {
+        case NID_md2 : type = CKM_MD2_RSA_PKCS; break;
+        case NID_md5 : type = CKM_MD5_RSA_PKCS; break;
+        case NID_sha1 : type = CKM_SHA1_RSA_PKCS; break;
+        case NID_sha224 : type = CKM_SHA224_RSA_PKCS; break;
+        case NID_sha256 : type = CKM_SHA256_RSA_PKCS; break;
+        case NID_sha384 : type = CKM_SHA384_RSA_PKCS; break;
+        case NID_sha512 : type = CKM_SHA512_RSA_PKCS; break;
+        case NID_ripemd160 : type = CKM_RIPEMD160_RSA_PKCS; break;
+        default : OPENSSL_PUT_ERROR(PKCS11, PKCS11_UNKNOWN_HASH); return 0;
+    }
+
+    CK_MECHANISM mech = { type, NULL_PTR, 0 };
+
+    CK_OBJECT_HANDLE public;
+    if (!get_rsa_key(&session, &public, rsa, CKO_PUBLIC_KEY))
+        return 0;
+
+    if ((ret = C_VerifyInit(session, &mech, public)) != CKR_OK) {
+        OPENSSL_PUT_ERROR(PKCS11,ret);
+        return 0;
+    }
+
+    if ((ret = C_Verify(session, msg, msg_len, (uint8_t*) signature, sig_len)) != CKR_OK) {
+        OPENSSL_PUT_ERROR(PKCS11,ret);
+        return 0;
+    }
+
+    return 1;
+}
+
 // ECDSA private functions
 
 static int fill_ec_key(EC_KEY *key, CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE *public) {
@@ -491,8 +529,7 @@ int PKCS11_EC_KEY_generate_key(CK_SESSION_HANDLE session, EC_KEY *key) {
     CK_BYTE *params;
     size_t params_size;
     CBB cbb;
-    if (!CBB_init(&cbb, 0) || EC_KEY_marshal_curve_name(&cbb, key->group)) {
-	printf("Weird error.\n");
+    if (!CBB_init(&cbb, 0) || !EC_KEY_marshal_curve_name(&cbb, key->group)) {
         OPENSSL_PUT_ERROR(PKCS11,PKCS11_EXTRACT_ASN1_FAIL);
         return 0;
     }

@@ -483,6 +483,7 @@ add_executable(
   pkcs7/pkcs7_test.cc
   pkcs8/pkcs8_test.cc
   pkcs8/pkcs12_test.cc
+  pkcs11/pkcs11_test.cc
   poly1305/poly1305_test.cc
   pool/pool_test.cc
   rand_extra/rand_test.cc
@@ -497,11 +498,18 @@ add_executable(
   x509v3/tab_test.cc
   x509v3/v3name_test.cc
 
+  pkcs11/pkcs11.c
   $<TARGET_OBJECTS:crypto_test_data>
   $<TARGET_OBJECTS:boringssl_gtest_main>
 )
 
 add_dependencies(crypto_test global_target)
+
+if (ENABLE_PKCS11)
+    target_link_libraries(crypto_test -lcrypto)
+    target_link_libraries(crypto_test -ldl)
+    target_link_libraries(crypto_test ${PKCS11_LIB})
+endif()
 
 target_link_libraries(crypto_test test_support_lib boringssl_gtest crypto)
 if(WIN32)

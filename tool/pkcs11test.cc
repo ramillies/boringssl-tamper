@@ -90,6 +90,13 @@ int main(int argc, char **argv)
 	CHECK(PKCS11_EC_KEY_generate_key(session, ec), "generate an ECC key");
 	CHECK(PEM_write_bio_EC_PUBKEY(bio, ec), "write the ECC key to stdout");
 
+	free(encrypted);
+	free(decrypted);
+	free(signature);
+	RSA_free(rsa);
+	BN_free(e);
+	BIO_free(bio);
+	EC_KEY_free(ec);
 	PKCS11_logout(session);
 	PKCS11_kill();
 	return 0;
