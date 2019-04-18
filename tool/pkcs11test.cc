@@ -29,7 +29,7 @@
 #include "../crypto/pkcs11/pkcs11.h"
 #include "../crypto/pkcs11/config.h"
 
-#define CHECK(what, msg) if(!(what)) { printf("Failed to %s.\n", msg); exit(1); }
+#define CHECK(what, msg) if(!(what)) { printf("Failed to %s.\n", msg); ERR_print_errors_fp(stderr); exit(1); }
 
 extern "C" {
 
@@ -101,6 +101,7 @@ int main(int argc, char **argv)
 	printf("\nAttempting to generate ECDSA key...\n");
 	EC_KEY *ec = EC_KEY_new_by_curve_name(NID_secp521r1);
 	CHECK(PKCS11_EC_KEY_generate_key(session, ec), "generate an ECC key");
+	CHECK(EC_KEY_check_key(ec), "pass sanity check on the generated key");
 	CHECK(PEM_write_bio_EC_PUBKEY(bio, ec), "write the ECC key to stdout");
 
 	free(encrypted);

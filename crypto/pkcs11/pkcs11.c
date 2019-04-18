@@ -448,10 +448,10 @@ static int fill_ec_key(EC_KEY *key, CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE
     }
 
     EC_POINT *point = EC_POINT_new(key->group);
-    EC_POINT_oct2point(key->group, point, &point_asn1[2], templ[0].ulValueLen-2, NULL);
+    EC_POINT_oct2point(key->group, point, point_asn1 + 3, templ[0].ulValueLen - 3, NULL);
     key->pub_key = point;
 
-    point_conversion_form_t form = point_asn1[2];
+    point_conversion_form_t form = point_asn1[3];
     const int y_bit = form & 1;
     form = form & ~1U;
     if ((form != POINT_CONVERSION_COMPRESSED &&
