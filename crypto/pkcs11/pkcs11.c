@@ -5,6 +5,7 @@
 #include <openssl/nid.h>
 #include <openssl/ec_key.h>
 #include <openssl/bytestring.h>
+#include <openssl/mem.h>
 #include "pkcs11.h"
 #include "config.h"
 
@@ -441,10 +442,10 @@ static int fill_ec_key(EC_KEY *key, CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE
     }
 
     EC_POINT *point = EC_POINT_new(key->group);
-    EC_POINT_oct2point(key->group, point, point_asn1, templ[0].ulValueLen, NULL);
+    EC_POINT_oct2point(key->group, point, &point_asn1[2], templ[0].ulValueLen-2, NULL);
     key->pub_key = point;
 
-    point_conversion_form_t form = point_asn1[0];
+    point_conversion_form_t form = point_asn1[2];
     const int y_bit = form & 1;
     form = form & ~1U;
     if ((form != POINT_CONVERSION_COMPRESSED &&
@@ -471,6 +472,12 @@ static int get_ec_key(const CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE *key, c
     }
     CBB_finish(&out_point, &point, &point_size);
 
+    CK_BYTE der_point[2 + point_size];
+    der_point[0] = 0x04;
+    der_point[1] = (uint8_t)point_size;
+    OPENSSL_memcpy(&der_point[2],point,point_size);
+    OPENSSL_free(point);
+
     CK_BYTE *params;
     size_t params_size;
     if (!CBB_init(&out_params, 0) || EC_KEY_marshal_curve_name(&out_params, ec->group)) {
@@ -484,7 +491,7 @@ static int get_ec_key(const CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE *key, c
             { CKA_CLASS, &class, sizeof(class) },
             { CKA_TOKEN, &CTRUE, sizeof(CTRUE) },
             { CKA_EC_PARAMS, params, params_size },
-            { CKA_EC_POINT, point, point_size }
+            { CKA_EC_POINT, der_point, point_size+2 }
     };
 
     if ((ret = C_FindObjectsInit(*session, templ, 6)) != CKR_OK) {
@@ -507,6 +514,8 @@ static int get_ec_key(const CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE *key, c
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
+
+    OPENSSL_free(params);
 
     return 1;
 }
