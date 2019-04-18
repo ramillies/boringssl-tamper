@@ -14,7 +14,8 @@
     #include "../fipsmodule/ec/internal.h"
 #endif
 
-#define BUFFER_MAX_ECPOINT_LEN ((528*2 / 8) + 1)
+//#define BUFFER_MAX_ECPOINT_LEN ((528*2 / 8) + 1)
+#define BUFFER_MAX_ECPOINT_LEN 2048
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
@@ -382,7 +383,7 @@ int PKCS11_RSA_sign(CK_SESSION_HANDLE session, RSA *rsa, int hash_nid, uint8_t *
     return 1;
 }
 
-int PKCS11_RSA_verify(PKCS11_session session, RSA *rsa, int hash_nid, uint8_t *msg, size_t msg_len, const uint8_t *signature, size_t sig_len) {
+int PKCS11_RSA_verify(PKCS11_session session, RSA *rsa, int hash_nid, uint8_t *msg, size_t msg_len, const uint8_t *signature, size_t sig_len, int *correct) {
 #ifndef ENABLE_PKCS11
     OPENSSL_PUT_ERROR(PKCS11,PKCS11_NOT_ENABLED);
     return 0;
@@ -418,7 +419,12 @@ int PKCS11_RSA_verify(PKCS11_session session, RSA *rsa, int hash_nid, uint8_t *m
         return 0;
     }
 
-    if ((ret = C_Verify(session, msg, msg_len, (uint8_t*) signature, sig_len)) != CKR_OK) {
+    ret = C_Verify(session, msg, msg_len, (uint8_t*) signature, sig_len);
+    if(ret == CKR_OK)
+	    *correct = 1;
+    else if((ret == CKR_SIGNATURE_INVALID) || (ret == CKR_SIGNATURE_LEN_RANGE))
+	    *correct = 0;
+    else {
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
@@ -437,6 +443,7 @@ static int fill_ec_key(EC_KEY *key, CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE
     };
 
     if ((ret = C_GetAttributeValue(*session, *public, templ, ARRAY_SIZE(templ))) != CKR_OK) {
+	printf("Getting attribute in fill_ec_key failed with %lu.\n", ret);
         OPENSSL_PUT_ERROR(PKCS11, ret);
         return 0;
     }
@@ -452,6 +459,7 @@ static int fill_ec_key(EC_KEY *key, CK_SESSION_HANDLE *session, CK_OBJECT_HANDLE
          form != POINT_CONVERSION_UNCOMPRESSED) ||
         (form == POINT_CONVERSION_UNCOMPRESSED && y_bit)) {
         OPENSSL_PUT_ERROR(PKCS11, PKCS11_INVALID_ENCODING);
+	printf("Bad encoding.\n");
         return 0;
     }
     key->conv_form = form;
@@ -538,7 +546,12 @@ int PKCS11_EC_KEY_generate_key(CK_SESSION_HANDLE session, EC_KEY *key) {
     CK_BYTE *params;
     size_t params_size;
     CBB cbb;
-    if (!CBB_init(&cbb, 0) || !EC_KEY_marshal_curve_name(&cbb, key->group)) {
+    if (!CBB_init(&cbb, 0)) {
+	    printf("Failed to init CBB (whatever it is).\n");
+	    return 0;
+    }
+    if(!EC_KEY_marshal_curve_name(&cbb, key->group)) {
+	    printf("Failed to init marshal curve name (whatever that is).\n");
         OPENSSL_PUT_ERROR(PKCS11,PKCS11_EXTRACT_ASN1_FAIL);
         return 0;
     }
@@ -562,11 +575,13 @@ int PKCS11_EC_KEY_generate_key(CK_SESSION_HANDLE session, EC_KEY *key) {
                                  RSA_PUB_TEMPLATE, ARRAY_SIZE(RSA_PUB_TEMPLATE),
                                  RSA_PRIV_TEMPLATE, ARRAY_SIZE(RSA_PRIV_TEMPLATE),
                                  &pub_key, &priv_key)) != CKR_OK) {
+	printf("Failed to generate a keypair.\n");
         OPENSSL_PUT_ERROR(PKCS11,ret);
         return 0;
     }
 
     if (!fill_ec_key(key, &session, &pub_key)) {
+	    printf("Failed to fill_ec_key\n");
         OPENSSL_PUT_ERROR(PKCS11,PKCS11_FILL_EC_ERR);
         return 0;
     }
